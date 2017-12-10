@@ -247,10 +247,10 @@ with tf.Session() as sess:
 	# Before training, run this:
 	tflearn.is_training(True, session=sess)
 	if os.path.isfile('/root/kaggle/dogs/model.ckpt.index'):
-		print "parameters loaded"
+		print("parameters loaded")
 		saver.restore(sess, TRAINEDMODEL)
 	else:
-		print "parameters initialized"
+		print("parameters initialized")
 		sess.run(init)
 	tt = time.time()
 	for epoch in range(num_epochs):
@@ -260,7 +260,7 @@ with tf.Session() as sess:
 			X_train, y_train = prepare_mini_batch_with_augmenter(k)
 			_ , minibatch_cost = sess.run([optimizer, loss], feed_dict={X_t: X_train, y_t: y_train,phase: 1, global_step: epoch})
 
-		        epoch_cost += minibatch_cost * y_train.shape[0]/ m   
+		cost += minibatch_cost * y_train.shape[0]/ m   
 		tmps2=time.clock()
   			
   		if epoch % epoch_control == 0:
