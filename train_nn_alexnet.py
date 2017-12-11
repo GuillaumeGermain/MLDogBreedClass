@@ -119,20 +119,20 @@ layerF1_biases_alex = tf.constant(net_data["fc6"][1])
 layerF2_weights_alex = tf.constant(net_data["fc7"][0])
 layerF2_biases_alex = tf.constant(net_data["fc7"][1])
 
-print np.array(net_data["conv1"][0]).shape
-print np.array(net_data["conv1"][1]).shape
-print np.array(net_data["conv2"][0]).shape
-print np.array(net_data["conv2"][1]).shape
-print np.array(net_data["conv3"][0]).shape
-print np.array(net_data["conv3"][1]).shape
-print np.array(net_data["conv4"][0]).shape
-print np.array(net_data["conv4"][1]).shape
-print np.array(net_data["conv5"][0]).shape
-print np.array(net_data["conv5"][1]).shape	
-print np.array(net_data["fc6"][0]).shape
-print np.array(net_data["fc6"][1]).shape
-print np.array(net_data["fc7"][0]).shape
-print np.array(net_data["fc7"][1]).shape
+print(np.array(net_data["conv1"][0]).shape)
+print(np.array(net_data["conv1"][1]).shape)
+print(np.array(net_data["conv2"][0]).shape)
+print(np.array(net_data["conv2"][1]).shape)
+print(np.array(net_data["conv3"][0]).shape)
+print(np.array(net_data["conv3"][1]).shape)
+print(np.array(net_data["conv4"][0]).shape)
+print(np.array(net_data["conv4"][1]).shape)
+print(np.array(net_data["conv5"][0]).shape)
+print(np.array(net_data["conv5"][1]).shape)	
+print(np.array(net_data["fc6"][0]).shape)
+print(np.array(net_data["fc6"][1]).shape)
+print(np.array(net_data["fc7"][0]).shape)
+print(np.array(net_data["fc7"][1]).shape)
 
 
 layerF3_weights_alex = tf.Variable(tf.truncated_normal([4096, 256], stddev=0.01))
@@ -225,7 +225,7 @@ with tf.Session() as sess:
 # Run the initialization
 	tmps1=time.clock()
 	X_train, y_train = prepare_mini_batch_with_augmenter(0)
-	print sess.run([
+	print(sess.run([
 			shape_X_t,
 			shape_conv1,
 			shape_lrn1,
@@ -239,14 +239,14 @@ with tf.Session() as sess:
 			shape_conv5,
 			shape_maxpool3
 
-		], feed_dict={X_t: X_train, y_t: y_train})
+		], feed_dict={X_t: X_train, y_t: y_train}))
 	# Before training, run this:
 	tflearn.is_training(True, session=sess)
 	if os.path.isfile('/root/kaggle/dogs/model.ckpt.index'):
-		print "parameters loaded"
+		print("parameters loaded")
 		saver.restore(sess, TRAINEDMODEL)
 	else:
-		print "parameters initialized"
+		print("parameters initialized")
 		sess.run(init)
 	tt = time.time()
 	for epoch in range(num_epochs):
@@ -260,9 +260,9 @@ with tf.Session() as sess:
 		tmps2=time.clock()
   			
   		if epoch % epoch_control == 0:
-  			print ("Cost mean epoch %i: %f" % (epoch, epoch_cost))
-  			print "execution time epoch = %f" %(tmps2-tmps1)
-  			print "total execution time = %f\n" %(time.time() - tt)
+  			print(("Cost mean epoch %i: %f" % (epoch, epoch_cost))
+  			print("execution time epoch = %f" %(tmps2-tmps1)
+  			print("total execution time = %f\n" %(time.time() - tt)
   			if epoch_cost < previous_cost:
 				previous_cost = epoch_cost
 				save_path = saver.save(sess, TRAINEDMODEL)

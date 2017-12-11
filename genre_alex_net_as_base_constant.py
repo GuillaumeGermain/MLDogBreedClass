@@ -60,13 +60,15 @@ print(len(df['genre'].unique()))
 print(len(df['date'].unique()))
 print(len(df['title'].unique()))
 print(len(df['filename'].unique()))
+
 filter = df["genre"] != ""
 df = df[["genre","filename"]]
 df = df.dropna()
-print df['genre'].unique()
+
+print(df['genre'].unique())
 print(len(df['genre'].unique()))
 print(len(df))
-print df.groupby(["genre"]).size().sort_values()
+print(df.groupby(["genre"]).size().sort_values())
 
 def randomize(data,label):
    permutations = np.random.permutation(data.index)
@@ -119,7 +121,7 @@ X_train, X_test, y_train, y_test = cross_validation.train_test_split(df, labels,
 
 train_size = len(X_train)
 
-print train_size
+print(train_size)
 
 def convGroup(input, kernel, biases,  c_o, s_h, s_w,  padding="VALID", group=2):
     '''From https://github.com/ethereon/caffe-tensorflow
@@ -201,7 +203,7 @@ with graph.as_default():
 	  conv5 = tf.nn.relu(conv5_in)
 	  maxpool3 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
 	  shape = maxpool3.get_shape().as_list()
-	  print shape
+	  print(shape)
 	  reshape = tf.reshape(maxpool3, [shape[0], shape[1] * shape[2] * shape[3]])
 	  hiddenF1 = tf.nn.relu(tf.matmul(reshape, layerF1_weights_alex) + layerF1_biases_alex)
 	  dropout1 = tf.nn.dropout(hiddenF1, 0.5)

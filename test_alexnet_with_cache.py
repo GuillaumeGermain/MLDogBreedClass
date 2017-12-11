@@ -64,8 +64,8 @@ y1 = y[0]
 n_y = y1.shape[0]
 
 X_train,y_train = prepare_data(X,y)
-print X_train.shape
-print y_train.shape
+print(X_train.shape)
+print(y_train.shape)
 
 X_t = tf.placeholder(shape = [ None, n_x],dtype = tf.float32, name = "X_t")
 y_t = tf.placeholder(shape =[ None, n_y],dtype = tf.float32, name = "y_t")

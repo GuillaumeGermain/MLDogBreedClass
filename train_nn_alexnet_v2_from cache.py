@@ -107,10 +107,10 @@ with tf.Session() as sess:
 	# Before training, run this:
 	tflearn.is_training(True, session=sess)
 	if os.path.isfile('/root/kaggle/dogs/model.ckpt.index'):
-		print "parameters loaded"
+		print("parameters loaded")
 		saver.restore(sess, TRAINEDMODEL)
 	else:
-		print "parameters initialized"
+		print("parameters initialized")
 		sess.run(init)
 	tt = time.time()
 	for epoch in range(num_epochs):
@@ -124,9 +124,9 @@ with tf.Session() as sess:
 		tmps2=time.clock()
   			
   		if epoch % epoch_control == 0:
-  			print ("Cost mean epoch %i: %f" % (epoch, epoch_cost))
-  			print "execution time epoch = %f" %(tmps2-tmps1)
-  			print "total execution time = %f\n" %(time.time() - tt)
+  			print("Cost mean epoch %i: %f" % (epoch, epoch_cost))
+  			print("execution time epoch = %f" %(tmps2-tmps1))
+  			print("total execution time = %f\n" %(time.time() - tt))
   			if epoch_cost < previous_cost:
 				previous_cost = epoch_cost
 				save_path = saver.save(sess, TRAINEDMODEL)
