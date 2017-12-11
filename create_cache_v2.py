@@ -78,7 +78,7 @@ breeds = df["breed"].as_matrix()
 breeds = np.expand_dims(breeds, axis=1)
 print(dum.shape)
 print(breeds.shape)
-labels = np.append(breeds,dum,axis=1)
+labels = np.append(breeds, dum, axis=1)
 filenames = df[["id"]].as_matrix()
 
 # m = labels.shape[0]                  # number of training examples
@@ -87,10 +87,10 @@ mini_batches = []
 print(df["id"].shape)
 print(labels.shape)
 
-X_train, X_test, y_train, y_test = train_test_split( filenames, labels, test_size=0.2)
+X_train, X_test, y_train, y_test = train_test_split(filenames, labels, test_size=0.2)
 
 print(X_test.shape)
 
 
-prepare_data( X_train, y_train, OUTFILETRAIN)
-prepare_data( X_test, y_test, OUTFILETEST)
+prepare_data(X_train, y_train, OUTFILETRAIN)
+prepare_data(X_test, y_test, OUTFILETEST)
