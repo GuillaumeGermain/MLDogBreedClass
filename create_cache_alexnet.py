@@ -4,82 +4,45 @@ import time
 import sys
 import math
 import os.path
-import tflearn
-
+import gc
 """
 
 """
-
-OUTFILETRAIN = '/root/kaggle/dogs/cache_train.npy'
-TRAINEDPARAMETERS = '/root/kaggle/dogs/trained_parameters.npy'
-TRAINEDMODEL = '/root/kaggle/dogs/model.ckpt'
+LASTKERNEL = 'fc6'
+INPUTTRAIN = '/root/kaggle/dogs/cache_train.npy'
+INPUTTEST = '/root/kaggle/dogs/cache_test.npy'
+OUTPUTYTRAIN = '/root/kaggle/dogs/cache_train_y.npy'
+OUTPUTLABELTRAIN = '/root/kaggle/dogs/cache_train_label.npy'
+OUTPUTXTRAIN = '/root/kaggle/dogs/cache_train_x_axel_'+ LASTKERNEL + '.npy'
+OUTPUTYTEST = '/root/kaggle/dogs/cache_test_y.npy'
+OUTPUTLABELTEST = '/root/kaggle/dogs/cache_test_label.npy'
+OUTPUTXTEST = '/root/kaggle/dogs/cache_test_x_axel_'+ LASTKERNEL + '.npy'
 PRETRAINEDAXELNET = '/root/kaggle/dogs/bvlc_alexnet.npy'
 
 
 image_width = 227
 image_size = image_width * image_width * 3
-starter_learning_rate = 0.001
-# learning_rate = 0.000001
 mini_batch_size = 128
-epoch_control = 10
-num_epochs = 5001
-epoch_learning_rate_decay = 100
-# L2 regularisation
-reg_constant=0.08
 
-# Real-time data augmentation
-
-img_aug = tflearn.ImageAugmentation()
-img_aug.add_random_flip_leftright()
-img_aug.add_random_crop([image_width, image_width], padding=4)
-
-# Real-time data preprocessing
-img_prep = tflearn.ImagePreprocessing()
-img_prep.add_featurewise_zero_center()
-img_prep.add_featurewise_stdnorm()
-
-def dense(x, size, scope):
-	return tf.contrib.layers.fully_connected(x, size,activation_fn=None,scope=scope)
-  
-def dense_batch_relu(x, size, phase, scope):
-    with tf.variable_scope(scope):
-        h1 = tf.contrib.layers.fully_connected(x, size, 
-                                               activation_fn=None,
-                                               scope='dense')
-        h2 = tf.contrib.layers.batch_norm(h1, 
-                                          center=True, 
-                                          scale=True, 
-                                          is_training=phase,
-                                          scope='bn')
-        return tf.nn.relu(h2, 'relu')
-
-
-data = np.load(OUTFILETRAIN)
+data = np.load(INPUTTRAIN)
 
 m = data.shape[1]
 X = data[0]
-y = data[1]
+label = data[1]
+y = data[2]
+
+np.save( OUTPUTYTRAIN, y )
+np.save( OUTPUTLABELTRAIN, label )
+
 x1 = X[0]
 y1 = y[0]
 n_y = y1.shape[0]
 
 num_complete_minibatches = int(math.floor(m/mini_batch_size))
 
-n_x = image_size
-
 X_t = tf.placeholder(shape = [ None, image_width,image_width,3],dtype = tf.float32, name = "X_t")
-y_t = tf.placeholder(shape =[ None, n_y],dtype = tf.float32, name = "y_t")
-phase = tf.placeholder(tf.bool, name='phase')
-global_step = tf.placeholder(tf.int32, name='global_step')
-
- # Input data.
-X_t = tf.placeholder(shape = [ None, image_width,image_width,3],dtype = tf.float32, name = "X_t")
-y_t = tf.placeholder(shape =[ None, n_y],dtype = tf.float32, name = "y_t")
-phase = tf.placeholder(tf.bool, name='phase')
-global_step = tf.placeholder(tf.int32, name='global_step')
 
 
-# Variables.
 
 #pre trained Constants
 net_data = np.load(PRETRAINEDAXELNET).item()
@@ -198,78 +161,65 @@ fc7 = tf.nn.relu_layer(fc6, fc7W, fc7b)
 
 #fc8
 #fc(1000, relu=False, name='fc8')
-"""
+
 fc8W = tf.constant(net_data["fc8"][0])
 fc8b = tf.constant(net_data["fc8"][1])
-fc8 = tf.nn.xw_plus_b(fc7, fc8W, fc8b)
-"""
-# greffe sur un AlexnET existant
-h1 = dense_batch_relu(fc7, 100, phase,'layer1')
-h2 = dense_batch_relu(h1, 100, phase, 'layer2')
-logits = dense(h2, n_y, 'logits')
 
-# Training computation.
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits = logits, labels = y_t))
-
-reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-loss = cost  + reg_constant * sum(reg_losses)
-
-# learning rate decay 
-learning_rate = tf.train.exponential_decay(starter_learning_rate, num_epochs, epoch_learning_rate_decay, 0.96, staircase=True)
-
-# optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate).minimize(loss)
-
-update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-with tf.control_dependencies(update_ops):
-# Ensures that we execute the update_ops before performing the train_step
-	optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate).minimize(loss)
-# optimizer = tf.train.GradientDescentOptimizer(learning_rate = learning_rate).minimize(cost)
-
+if LASTKERNEL =="fc7":
+	selected_layer = fc7
+elif LASTKERNEL =="fc6":
+	selected_layer = fc6
+else:
+	selected_layer = fc8
 # Initialize all the variables
 init = tf.global_variables_initializer()
 
-# Add ops to save and restore all the variables.
-saver = tf.train.Saver()
-
-def prepare_mini_batch_with_augmenter(k):
+def prepare_mini_batch(k):
 	first = k * mini_batch_size
 	last = min((k + 1) * mini_batch_size, m)
-	X_train = np.asarray(X[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32) / 255
-	y_train = np.asarray(y[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32)
-	return X_train,y_train
-
-
-previous_cost = 9999.0
-
+	X_batch = np.asarray(X[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32) # / 255 surement pas prevu sur alexnet
+	return X_batch
+	
+my_array = np.array([])
 with tf.Session() as sess:
 # Run the initialization
-	tmps1=time.clock()
-	# Before training, run this:
-	tflearn.is_training(True, session=sess)
-	if os.path.isfile('/root/kaggle/dogs/model.ckpt.index'):
-		print "parameters loaded"
-		saver.restore(sess, TRAINEDMODEL)
-	else:
-		print "parameters initialized"
-		sess.run(init)
-	tt = time.time()
-	for epoch in range(num_epochs):
-		tmps1=time.clock()
-		epoch_cost = 0.0
-		for k in range(num_complete_minibatches):
-			X_train, y_train = prepare_mini_batch_with_augmenter(k)
-			_ , minibatch_cost = sess.run([optimizer, loss], feed_dict={X_t: X_train, y_t: y_train,phase: 1, global_step: epoch})
+	for k in range(num_complete_minibatches + 1):
+		X_batch = prepare_mini_batch(k)
+		result = sess.run(selected_layer, {X_t: X_batch})
+		if k == 0: 
+			my_array = result
+		else:
+			my_array = np.concatenate((my_array,result), axis=0)
 
-		        epoch_cost += minibatch_cost * y_train.shape[0]/ m   
-		tmps2=time.clock()
-  			
-  		if epoch % epoch_control == 0:
-  			print ("Cost mean epoch %i: %f" % (epoch, epoch_cost))
-  			print "execution time epoch = %f" %(tmps2-tmps1)
-  			print "total execution time = %f\n" %(time.time() - tt)
-  			if epoch_cost < previous_cost:
-				previous_cost = epoch_cost
-				save_path = saver.save(sess, TRAINEDMODEL)
+np.save( OUTPUTXTRAIN, my_array)
+
+del X
+del y
+gc.collect()
+
+data = np.load(INPUTTEST)
+
+m = data.shape[1]
+X = data[0]
+labels = data[1]
+y = data[2]
+
+num_complete_minibatches = int(math.floor(m/mini_batch_size))
+
+np.save( OUTPUTLABELTEST, labels )
+np.save( OUTPUTYTEST, y )
+my_array = np.array([])
+with tf.Session() as sess:
+# Run the initialization
+	for k in range(num_complete_minibatches + 1):
+		X_batch = prepare_mini_batch(k)
+		result = sess.run(selected_layer, {X_t: X_batch})
+		if k == 0: 
+			my_array = result
+		else:
+			my_array = np.concatenate((my_array,result), axis=0)
+
+np.save( OUTPUTXTEST, my_array)
   			
 	#parameters = sess.run(parameters)
 	
