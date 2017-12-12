@@ -3,10 +3,10 @@ import types
 import Image
 import pandas as pd
 import numpy as np
-#import math
 from sklearn.model_selection import train_test_split
 import scipy
 from scipy import ndimage
+#import math
 
 
 Image.MAX_IMAGE_PIXELS = 100_000_000_000

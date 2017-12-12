@@ -39,7 +39,7 @@ img_prep.add_featurewise_zero_center()
 img_prep.add_featurewise_stdnorm()
 
 def dense(x, size, scope):
-	return tf.contrib.layers.fully_connected(x, size,activation_fn=None,scope=scope)
+    return tf.contrib.layers.fully_connected(x, size,activation_fn=None,scope=scope)
   
 def dense_batch_relu(x, size, phase, scope):
     with tf.variable_scope(scope):
@@ -222,7 +222,7 @@ learning_rate = tf.train.exponential_decay(starter_learning_rate, num_epochs, ep
 update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 with tf.control_dependencies(update_ops):
 # Ensures that we execute the update_ops before performing the train_step
-	optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate).minimize(loss)
+    optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate).minimize(loss)
 # optimizer = tf.train.GradientDescentOptimizer(learning_rate = learning_rate).minimize(cost)
 
 # Initialize all the variables
@@ -232,47 +232,47 @@ init = tf.global_variables_initializer()
 saver = tf.train.Saver()
 
 def prepare_mini_batch_with_augmenter(k):
-	first = k * mini_batch_size
-	last = min((k + 1) * mini_batch_size, m)
-	X_train = np.asarray(X[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32) / 255
-	y_train = np.asarray(y[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32)
-	return X_train,y_train
+    first = k * mini_batch_size
+    last = min((k + 1) * mini_batch_size, m)
+    X_train = np.asarray(X[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32) / 255
+    y_train = np.asarray(y[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32)
+    return X_train,y_train
 
 
 previous_cost = 9999.0
 
 with tf.Session() as sess:
 # Run the initialization
-	tmps1=time.clock()
-	# Before training, run this:
-	tflearn.is_training(True, session=sess)
-	if os.path.isfile('/root/kaggle/dogs/model.ckpt.index'):
-		print "parameters loaded"
-		saver.restore(sess, TRAINEDMODEL)
-	else:
-		print "parameters initialized"
-		sess.run(init)
-	tt = time.time()
-	for epoch in range(num_epochs):
-		tmps1=time.clock()
-		epoch_cost = 0.0
-		for k in range(num_complete_minibatches):
-			X_train, y_train = prepare_mini_batch_with_augmenter(k)
-			_ , minibatch_cost = sess.run([optimizer, loss], feed_dict={X_t: X_train, y_t: y_train,phase: 1, global_step: epoch})
-
-		        epoch_cost += minibatch_cost * y_train.shape[0]/ m   
-		tmps2=time.clock()
-  			
-  		if epoch % epoch_control == 0:
-  			print ("Cost mean epoch %i: %f" % (epoch, epoch_cost))
-  			print "execution time epoch = %f" %(tmps2-tmps1)
-  			print "total execution time = %f\n" %(time.time() - tt)
-  			if epoch_cost < previous_cost:
-				previous_cost = epoch_cost
-				save_path = saver.save(sess, TRAINEDMODEL)
-  			
-	#parameters = sess.run(parameters)
-	
+    tmps1=time.clock()
+    # Before training, run this:
+    tflearn.is_training(True, session=sess)
+    if os.path.isfile('/root/kaggle/dogs/model.ckpt.index'):
+        print("parameters loaded")
+        saver.restore(sess, TRAINEDMODEL)
+    else:
+        print("parameters initialized")
+        sess.run(init)
+    tt = time.time()
+    for epoch in range(num_epochs):
+        tmps1=time.clock()
+        epoch_cost = 0.0
+        for k in range(num_complete_minibatches):
+            X_train, y_train = prepare_mini_batch_with_augmenter(k)
+            _ , minibatch_cost = sess.run([optimizer, loss], \
+                                          feed_dict={X_t: X_train, y_t: y_train,phase: 1, global_step: epoch})
+            epoch_cost += minibatch_cost * y_train.shape[0]/ m   
+        tmps2=time.clock()
+              
+        if epoch % epoch_control == 0:
+            print("Cost mean epoch %i: %f" % (epoch, epoch_cost))
+            print("execution time epoch = %f" %(tmps2-tmps1))
+            print("total execution time = %f\n" %(time.time() - tt))
+            if epoch_cost < previous_cost:
+                previous_cost = epoch_cost
+                save_path = saver.save(sess, TRAINEDMODEL)
+              
+    #parameters = sess.run(parameters)
+    
 # np.save(TRAINEDPARAMETERS, parameters) 
 
 # Load
