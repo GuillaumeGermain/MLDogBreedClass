@@ -6,50 +6,10 @@ Created on Tue Dec 12 10:58:48 2017
 
 
 #Today quick playing with os and pandas framework
-from pathlib import Path
+#from pathlib import Path
 import pandas as pd
+from gg_util import iff, input_path, has_na, print_head
 
-
-
-#print("os.name", os.name)
-#print("getenv", os.get_exec_path())
-
-
-def input_path():
-    """
-    output: "Kaggle input" folder location as string
-    """
-    my_dir = "input/"
-    if Path.is_dir(Path(my_dir)):
-        return my_dir
-    elif Path.is_dir(Path("../" + my_dir)):
-        return "../" + my_dir
-    return None
-
-def has_na(df):
-    """
-    input: df, pd.DataFrame
-    output: boolean, if df has at least a NA value
-    """
-    assert df is not None
-    return df.isnull().values.any()
-
-def print_head(df, n):
-    """
-    input:
-        df, pd.DataFrame
-        n nb of lines to display
-    output: boolean, if df has at least a NA value
-    """
-    #assert() n is integer and >=0
-    assert(df is not None)
-    print(df.head(n))
-
-def iff(a,b,c):
-    if a:
-        return b
-    else:
-        return c
 
 #Constants
 INPUT_PATH = input_path()
@@ -60,21 +20,23 @@ OUT_FILE_TRAIN = '/root/kaggle/dogs/cache_train'
 
 #print("IMG_LIST", IMG_LIST)
 
+#df: DataFrame
+df = pd.read_csv(IMG_LIST)
 
-data_file = pd.read_csv(IMG_LIST)
-
-#print_head(data_file, 10)
-#print("data_file.shape", data_file.shape)
-#print("type(data_file)", type(data_file))
+#print_head(df, 10)
+#print("df.shape", df.shape)
+#print("type(df)", type(df))
 
 
 #is there any NA value?
-print("has df NA values?", iff(has_na(data_file), "Yes", "No"))
+print("has df NA values?", iff(has_na(df), "Yes", "No"))
 
 #Just to be double-sure for next usages of this file...
-data_file.dropna()
+df.dropna()
 
-
-
-
-
+#get_dummies converts variables with limited discrete values into numbers
+#outputs dataframe
+#as_matrix(): stores as np array
+df_breeds = pd.get_dummies(df["breed"]).as_matrix()
+print("breeds.shape", df_breeds.shape)
+print_head(df_breeds)
