@@ -1,9 +1,14 @@
+"""
+Implémentation d'AlexNet pour la compétition
+Le modèle pris a 8 couches.
+On reprend les 7 premières, et on utilise une fonction NB_Polynomiale pour les résultats
+"""
 import os
 import pandas as pd
 import numpy as np
 import scipy
 from scipy import ndimage
-import types
+#import types
 import tensorflow as tf
 import math
 from gg_util import INPUT_PATH
@@ -83,26 +88,28 @@ def get_data():
 
 def getAlexnetSelectedLayer(layer):
     """
-     get pretained alexnet selected layer
+        Get pretained alexnet selected layer
     """
     PRETRAINED_AXELNET = '../tools/alexnet/bvlc_alexnet.npy'
     X_t = tf.placeholder(shape = [None, IMAGE_WIDTH, IMAGE_WIDTH, 3], dtype=tf.float32, name="X_t")
     #pre trained Constants
     net_data = np.load(PRETRAINED_AXELNET).item()
+    
     # Model.
-    def conv(input, kernel, biases, k_h, k_w, c_o, s_h, s_w, padding="VALID", group=1):
-        '''From https://github.com/ethereon/caffe-tensorflow
+    def conv(input_, kernel, biases, k_h, k_w, c_o, s_h, s_w, padding="VALID", group=1):
         '''
-        c_i = input.get_shape()[-1]
+            From https://github.com/ethereon/caffe-tensorflow
+        '''
+        c_i = input_.get_shape()[-1]
         assert c_i%group == 0
         assert c_o%group == 0
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
 
 
         if group == 1:
-            conv = convolve(input, kernel)
+            conv = convolve(input_, kernel)
         else:
-            input_groups = tf.split(input, group, 3)   #tf.split(3, group, input)
+            input_groups = tf.split(input_, group, 3)   #tf.split(3, group, input_)
             kernel_groups = tf.split(kernel, group, 3)  #tf.split(3, group, kernel)
             output_groups = [convolve(i, k) for i, k in zip(input_groups, kernel_groups)]
             conv = tf.concat(output_groups, 3)          #tf.concat(3, output_groups)
@@ -203,8 +210,8 @@ def getLayerOutputFromPretrainedAlexnet(layer, data_image):
     # Initialize all the variables
     # init = tf.global_variables_initializer()
     def prepare_mini_batch(k):
-        first = k * mini_batch_size
-        last = min((k + 1) * mini_batch_size, m)
+#        first = k * mini_batch_size
+#        last = min((k + 1) * mini_batch_size, m)
         X_batch = np.asarray(data_image[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32)
         return X_batch
     my_array = np.array([])
@@ -234,7 +241,8 @@ def get_data_from_pretrained_alexnet(layer):
         np.save(ALEX_X_FILE, X)
     return X, y
 
-FILENAMETESTCACHE = './cache/alexnet_ML/cache_test_filename'
+
+FILENAME_TEST_CACHE = './cache/alexnet_ML/cache_test_filename'
 
 def create_test_data():
     IMAGETESTPATH = './data/test/'
@@ -246,10 +254,10 @@ def get_test_data():
     FILETESTCACHE = './cache/alexnet_ML/cache_test_data'
     if os.path.isfile(FILETESTCACHE + '.npy'):
         data = np.load(FILETESTCACHE + '.npy')
-        filenames = np.load(FILENAMETESTCACHE + '.npy')
+        filenames = np.load(FILENAME_TEST_CACHE + '.npy')
     else:
         filenames, data = create_test_data()
-        np.save(FILENAMETESTCACHE, filenames)
+        np.save(FILENAME_TEST_CACHE, filenames)
         np.save(FILETESTCACHE, data)
     return filenames, data
 
@@ -257,19 +265,22 @@ def get_test_from_pretrained_alexnet(layer):
     ALEX_X_TEST_FILE = './cache/alexnet_ML/X_alex_test_'+ layer + '.npy'
     if os.path.isfile(ALEX_X_TEST_FILE):
         X_test = np.load(ALEX_X_TEST_FILE)
-        filenames = np.load(FILENAMETESTCACHE + '.npy')
+        filenames = np.load(FILENAME_TEST_CACHE + '.npy')
     else:
         filenames, images = get_test_data()
         X_test = getLayerOutputFromPretrainedAlexnet(layer, images)
         np.save(ALEX_X_TEST_FILE, X_test)
     return filenames, X_test
 
-#Un petit Multinomial sur la fin
-#TODO ajouter une couche et un softmax?
+
 from sklearn.naive_bayes import MultinomialNB
 #from sklearn.model_selection import cross_val_predict
 #from sklearn import metrics
 X, y = get_data_from_pretrained_alexnet('fc7')
+
+
+#Un petit Multinomial sur la fin
+#TODO ajouter une couche et un softmax?
 clf = MultinomialNB(alpha=.01)
 clf.fit(X, y)
 filenames_test, X_test = get_test_from_pretrained_alexnet('fc7')
