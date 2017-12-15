@@ -7,101 +7,104 @@ import types
 import tensorflow as tf
 import math
 from gg_util import INPUT_PATH
+
 """
 External Files
 """
-
 IMG_PATH   = INPUT_PATH + 'train/'
 FDATA      = INPUT_PATH + 'labels.csv'
 FILE_CACHE = INPUT_PATH + 'cache/alexnet_ML/cache_all_data'
+
 """
 Parameters
 """
-image_width = 227
-num_channels = 3
+IMAGE_WIDTH = 227
+NUM_CHANNELS = 3
 
-"""
-Transforme une image en numpy array
-"""
-def image_to_array(path,filename):
-    infile = os.path.join(path,filename[0] +'.jpg')
-    if (os.path.isfile(infile)):
+def image_to_array(path, filename):
+    """
+    Transforme une image en numpy array
+    """
+    infile = os.path.join(path, filename[0] + '.jpg')
+    if os.path.isfile(infile):
         try:
-            image = np.array(ndimage.imread(infile, flatten=False,mode="RGB"))
-            if (image.shape[0] * image.shape[1] * image.shape[2] < 400000000000):
-                my_image = scipy.misc.imresize(image, size=(image_width,image_width))
+            image = np.array(ndimage.imread(infile, flatten=False, mode="RGB"))
+            if image.shape[0] * image.shape[1] * image.shape[2] < 400_000_000_000:
+                my_image = scipy.misc.imresize(image, size=(IMAGE_WIDTH, IMAGE_WIDTH))
                 return my_image
             else:
                 print(my_image)
-        except (IOError,MemoryError):
+        except (IOError, MemoryError):
             print("memoryError")
     else:
         print(infile)
     return False
 
-"""
-   Prepare un tuple au format (X,y)
-   X est le tableau des images
-   y est le tableau des labels
-"""
-def prepare_datas(path,filenames,breeds = None):
+def prepare_datas(path, filenames, breeds=None):
+    """
+       Prepare un tuple au format (X,y)
+       X est le tableau des images
+       y est le tableau des labels
+    """
     m = filenames.shape[0]
     X = []
     y = []
     #label = []
     for l in range(m):
-        img = image_to_array(path,filenames[l])
+        img = image_to_array(path, filenames[l])
         if type(img) != bool:
             X.append(img)
-            if (breeds != None):
+            if breeds != None:
                 y.append(breeds[l])
     return (X, y)
-"""
-   Cree le cache au format (X,y) et l'enregistre
-"""
+
 def create_cache():
+    """
+       Cree le cache au format (X,y) et l'enregistre
+    """
     df = pd.read_csv(FDATA)
-    df = df[["id","breed"]]
+    df = df[["id", "breed"]]
     df = df.dropna()
     breeds = df["breed"].as_matrix()
     filenames = df[["id"]].as_matrix()
-    data = prepare_datas(IMG_PATH,filenames,breeds)
-    np.save( FILE_CACHE, data )
+    data = prepare_datas(IMG_PATH, filenames, breeds)
+    np.save(FILE_CACHE, data)
     return data
-"""
-   Renvoie les donnees au format (X,y)
-"""
+
 def get_data():
-    if (os.path.isfile(FILE_CACHE + '.npy')):
+    """
+       Renvoie les donnees au format (X,y)
+    """
+    if os.path.isfile(FILE_CACHE + '.npy'):
         data = np.load(FILE_CACHE + '.npy')
     else:
         data = create_cache()
     return data
 
-"""
- get pretained alexnet selected layer
-"""
 def getAlexnetSelectedLayer(layer):
-    PRETRAINEDAXELNET = '../tools/alexnet/bvlc_alexnet.npy'
-    X_t = tf.placeholder(shape = [ None, image_width,image_width,3],dtype = tf.float32, name = "X_t")
+    """
+     get pretained alexnet selected layer
+    """
+    PRETRAINED_AXELNET = '../tools/alexnet/bvlc_alexnet.npy'
+    X_t = tf.placeholder(shape = [None, IMAGE_WIDTH, IMAGE_WIDTH, 3], dtype=tf.float32, name="X_t")
     #pre trained Constants
-    net_data = np.load(PRETRAINEDAXELNET).item()
+    net_data = np.load(PRETRAINED_AXELNET).item()
     # Model.
-    def conv(input, kernel, biases, k_h, k_w, c_o, s_h, s_w,  padding="VALID", group=1):
+    def conv(input, kernel, biases, k_h, k_w, c_o, s_h, s_w, padding="VALID", group=1):
         '''From https://github.com/ethereon/caffe-tensorflow
         '''
         c_i = input.get_shape()[-1]
-        assert c_i%group==0
-        assert c_o%group==0
+        assert c_i%group == 0
+        assert c_o%group == 0
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
 
 
-        if group==1:
+        if group == 1:
             conv = convolve(input, kernel)
         else:
-            input_groups =  tf.split(input, group, 3)   #tf.split(3, group, input)
+            input_groups = tf.split(input, group, 3)   #tf.split(3, group, input)
             kernel_groups = tf.split(kernel, group, 3)  #tf.split(3, group, kernel)
-            output_groups = [convolve(i, k) for i,k in zip(input_groups, kernel_groups)]
+            output_groups = [convolve(i, k) for i, k in zip(input_groups, kernel_groups)]
             conv = tf.concat(output_groups, 3)          #tf.concat(3, output_groups)
         return  tf.reshape(tf.nn.bias_add(conv, biases), [-1]+conv.get_shape().as_list()[1:])
     
@@ -116,10 +119,10 @@ def getAlexnetSelectedLayer(layer):
     #lrn(2, 2e-05, 0.75, name='norm1')
     radius = 2; alpha = 2e-05; beta = 0.75; bias = 1.0
     lrn1 = tf.nn.local_response_normalization(conv1,
-                                                  depth_radius=radius,
-                                                  alpha=alpha,
-                                                  beta=beta,
-                                                  bias=bias)
+                                              depth_radius=radius,
+                                              alpha=alpha,
+                                              beta=beta,
+                                              bias=bias)
     #maxpool1
     #max_pool(3, 3, 2, 2, padding='VALID', name='pool1')
     k_h = 3; k_w = 3; s_h = 2; s_w = 2; padding = 'VALID'
@@ -135,10 +138,10 @@ def getAlexnetSelectedLayer(layer):
     #lrn(2, 2e-05, 0.75, name='norm2')
     radius = 2; alpha = 2e-05; beta = 0.75; bias = 1.0
     lrn2 = tf.nn.local_response_normalization(conv2,
-                                                  depth_radius=radius,
-                                                  alpha=alpha,
-                                                  beta=beta,
-                                                  bias=bias)
+                                              depth_radius=radius,
+                                              alpha=alpha,
+                                              beta=beta,
+                                              bias=bias)
     #maxpool2
     #max_pool(3, 3, 2, 2, padding='VALID', name='pool2')
     k_h = 3; k_w = 3; s_h = 2; s_w = 2; padding = 'VALID'
@@ -183,20 +186,20 @@ def getAlexnetSelectedLayer(layer):
     #fc(1000, relu=False, name='fc8')
     # fc8W = tf.constant(net_data["fc8"][0])
     # fc8b = tf.constant(net_data["fc8"][1])
-    if layer =="fc7":
+    if layer == "fc7":
         selected_layer = fc7
-    elif layer =="fc6":
+    elif layer == "fc6":
         selected_layer = fc6
-    else:
-        selected_layer = fc8
-    return X_t,selected_layer
+#    else:
+#        selected_layer = fc8
+    return X_t, selected_layer
 
 
-def getLayerOutputFromPretrainedAlexnet(layer,data_image):
+def getLayerOutputFromPretrainedAlexnet(layer, data_image):
     mini_batch_size = 128
     m = data_image.shape[0]
     num_complete_minibatches = int(math.floor(m/mini_batch_size))
-    X_t,selected_layer = getAlexnetSelectedLayer(layer)
+    X_t, selected_layer = getAlexnetSelectedLayer(layer)
     # Initialize all the variables
     # init = tf.global_variables_initializer()
     def prepare_mini_batch(k):
@@ -213,65 +216,68 @@ def getLayerOutputFromPretrainedAlexnet(layer,data_image):
             if k == 0:
                 my_array = result
             else:
-                my_array = np.concatenate((my_array,result), axis=0)
+                my_array = np.concatenate((my_array, result), axis=0)
     return  my_array
 
 
 def get_data_from_pretrained_alexnet(layer):
     ALEX_X_FILE = './cache/alexnet_ML/X_alex_'+ layer + '.npy'
     LABEL_FILE = './cache/alexnet_ML/y_label.npy'
-    if (os.path.isfile(ALEX_X_FILE)):
+    if os.path.isfile(ALEX_X_FILE):
         X = np.load(ALEX_X_FILE)
         y = np.load(LABEL_FILE)
     else:
         data = get_data()
         y = data[1]
-        X = getLayerOutputFromPretrainedAlexnet(layer,data[0])
-        np.save( LABEL_FILE, y )
-        np.save( ALEX_X_FILE, X )
-    return X,y
+        X = getLayerOutputFromPretrainedAlexnet(layer, data[0])
+        np.save(LABEL_FILE, y)
+        np.save(ALEX_X_FILE, X)
+    return X, y
 
 FILENAMETESTCACHE = './cache/alexnet_ML/cache_test_filename'
+
 def create_test_data():
     IMAGETESTPATH = './data/test/'
-    filenames_test = np.expand_dims(np.array([s.replace(".jpg","") for s in os.listdir(IMAGETESTPATH)]), axis=1)
-    images_test,_ = prepare_datas(IMAGETESTPATH,filenames_test)
-    return filenames_test,np.array(images_test)
+    filenames_test = np.expand_dims(np.array([s.replace(".jpg", "") for s in os.listdir(IMAGETESTPATH)]), axis=1)
+    images_test, _ = prepare_datas(IMAGETESTPATH, filenames_test)
+    return filenames_test, np.array(images_test)
 
 def get_test_data():
     FILETESTCACHE = './cache/alexnet_ML/cache_test_data'
-    if (os.path.isfile(FILETESTCACHE + '.npy')):
+    if os.path.isfile(FILETESTCACHE + '.npy'):
         data = np.load(FILETESTCACHE + '.npy')
         filenames = np.load(FILENAMETESTCACHE + '.npy')
     else:
-        filenames,data = create_test_data()
-        np.save(FILENAMETESTCACHE,filenames)
-        np.save(FILETESTCACHE,data)
-    return filenames,data
+        filenames, data = create_test_data()
+        np.save(FILENAMETESTCACHE, filenames)
+        np.save(FILETESTCACHE, data)
+    return filenames, data
 
 def get_test_from_pretrained_alexnet(layer):
     ALEX_X_TEST_FILE = './cache/alexnet_ML/X_alex_test_'+ layer + '.npy'
-    if (os.path.isfile(ALEX_X_TEST_FILE)):
+    if os.path.isfile(ALEX_X_TEST_FILE):
         X_test = np.load(ALEX_X_TEST_FILE)
         filenames = np.load(FILENAMETESTCACHE + '.npy')
     else:
-        filenames,images = get_test_data()
-        X_test = getLayerOutputFromPretrainedAlexnet(layer,images)
-        np.save( ALEX_X_TEST_FILE, X_test)
-    return filenames,X_test
+        filenames, images = get_test_data()
+        X_test = getLayerOutputFromPretrainedAlexnet(layer, images)
+        np.save(ALEX_X_TEST_FILE, X_test)
+    return filenames, X_test
 
+#Un petit Multinomial sur la fin
+#TODO ajouter une couche et un softmax?
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.model_selection import cross_val_predict
-from sklearn import metrics
-X,y = get_data_from_pretrained_alexnet('fc7')
+#from sklearn.model_selection import cross_val_predict
+#from sklearn import metrics
+X, y = get_data_from_pretrained_alexnet('fc7')
 clf = MultinomialNB(alpha=.01)
-clf.fit( X, y)
-filenames_test,X_test = get_test_from_pretrained_alexnet('fc7')
+clf.fit(X, y)
+filenames_test, X_test = get_test_from_pretrained_alexnet('fc7')
 proba = clf.predict_proba(X_test)
 filenames = np.array(filenames_test).T[0]
 print(filenames)
-df = pd.DataFrame(data=proba,    # values
-             index=filenames,    # 1st column as index
-             columns=clf.classes_)  # 1st row as the column names
+df = pd.DataFrame(data=proba,               # values
+                  index=filenames,          # 1st column as index
+                  columns=clf.classes_)     # 1st row as the column names
 df.index.name = "id"
 df.to_csv('./cache/alexnet_ML/submission.csv')

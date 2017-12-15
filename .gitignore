@@ -106,3 +106,4 @@ ENV/
 #dogs tmp files
 img_cache/
 data/
+tmp/submission.csv.7z
