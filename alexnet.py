@@ -1,7 +1,24 @@
 """
-Implémentation d'AlexNet pour la compétition
-Le modèle pris a 8 couches.
-On reprend les 7 premières, et on utilise une fonction NB_Polynomiale pour les résultats
+    Main source code for the Kaggle dog breed classification competition
+    
+    AlexNet
+    Implementation of AlexNet 
+    The chosen model has 8 layers
+    We take the 7 first ones, and we complete by a MultinomialNB function for the results
+    
+    Inception v3: coming soon
+    
+    Folder structure:
+    /data                 data folder with labels.csv
+    /data/train           training data
+    /data/test            test data
+    /tools                models
+    /tools/alexnet        alexnet models and weights
+    /tools/inception_v3   inception v3 model and weights
+    /result               model results folder
+
+    The data, models and result are not shared on GitHub
+    
 """
 import os
 import pandas as pd
@@ -45,7 +62,7 @@ def image_to_array(path, filename):
         print(infile)
     return False
 
-def prepare_datas(path, filenames, breeds=None):
+def prepare_data(path, filenames, breeds=None):
     """
        Prepare un tuple au format (X,y)
        X est le tableau des images
@@ -72,7 +89,7 @@ def create_cache():
     df = df.dropna()
     breeds = df["breed"].as_matrix()
     filenames = df[["id"]].as_matrix()
-    data = prepare_datas(IMG_PATH, filenames, breeds)
+    data = prepare_data(IMG_PATH, filenames, breeds)
     np.save(FILE_CACHE, data)
     return data
 
@@ -86,6 +103,25 @@ def get_data():
         data = create_cache()
     return data
 
+def conv(input_, kernel, biases, k_h, k_w, c_o, s_h, s_w, padding="VALID", group=1):
+    '''
+        From https://github.com/ethereon/caffe-tensorflow
+    '''
+    c_i = input_.get_shape()[-1]
+    assert c_i%group == 0
+    assert c_o%group == 0
+    convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
+
+
+    if group == 1:
+        conv = convolve(input_, kernel)
+    else:
+        input_groups = tf.split(input_, group, 3)   #tf.split(3, group, input_)
+        kernel_groups = tf.split(kernel, group, 3)  #tf.split(3, group, kernel)
+        output_groups = [convolve(i, k) for i, k in zip(input_groups, kernel_groups)]
+        conv = tf.concat(output_groups, 3)          #tf.concat(3, output_groups)
+    return  tf.reshape(tf.nn.bias_add(conv, biases), [-1]+conv.get_shape().as_list()[1:])
+
 def getAlexnetSelectedLayer(layer):
     """
         Get pretained alexnet selected layer
@@ -94,27 +130,7 @@ def getAlexnetSelectedLayer(layer):
     X_t = tf.placeholder(shape = [None, IMAGE_WIDTH, IMAGE_WIDTH, 3], dtype=tf.float32, name="X_t")
     #pre trained Constants
     net_data = np.load(PRETRAINED_AXELNET).item()
-    
-    # Model.
-    def conv(input_, kernel, biases, k_h, k_w, c_o, s_h, s_w, padding="VALID", group=1):
-        '''
-            From https://github.com/ethereon/caffe-tensorflow
-        '''
-        c_i = input_.get_shape()[-1]
-        assert c_i%group == 0
-        assert c_o%group == 0
-        convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
 
-
-        if group == 1:
-            conv = convolve(input_, kernel)
-        else:
-            input_groups = tf.split(input_, group, 3)   #tf.split(3, group, input_)
-            kernel_groups = tf.split(kernel, group, 3)  #tf.split(3, group, kernel)
-            output_groups = [convolve(i, k) for i, k in zip(input_groups, kernel_groups)]
-            conv = tf.concat(output_groups, 3)          #tf.concat(3, output_groups)
-        return  tf.reshape(tf.nn.bias_add(conv, biases), [-1]+conv.get_shape().as_list()[1:])
-    
     #conv1
     #conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
     k_h = 11; k_w = 11; c_o = 96; s_h = 4; s_w = 4
@@ -122,6 +138,7 @@ def getAlexnetSelectedLayer(layer):
     conv1b = tf.constant(net_data["conv1"][1])
     conv1_in = conv(X_t, conv1W, conv1b, k_h, k_w, c_o, s_h, s_w, padding="SAME", group=1)
     conv1 = tf.nn.relu(conv1_in)
+
     #lrn1
     #lrn(2, 2e-05, 0.75, name='norm1')
     radius = 2; alpha = 2e-05; beta = 0.75; bias = 1.0
@@ -130,10 +147,15 @@ def getAlexnetSelectedLayer(layer):
                                               alpha=alpha,
                                               beta=beta,
                                               bias=bias)
+    
     #maxpool1
     #max_pool(3, 3, 2, 2, padding='VALID', name='pool1')
     k_h = 3; k_w = 3; s_h = 2; s_w = 2; padding = 'VALID'
-    maxpool1 = tf.nn.max_pool(lrn1, ksize=[1, k_h, k_w, 1], strides=[1, s_h, s_w, 1], padding=padding)
+    maxpool1 = tf.nn.max_pool(lrn1, 
+                              ksize=[1, k_h, k_w, 1], 
+                              strides=[1, s_h, s_w, 1], 
+                              padding=padding)
+
     #conv2
     #conv(5, 5, 256, 1, 1, group=2, name='conv2')
     k_h = 5; k_w = 5; c_o = 256; s_h = 1; s_w = 1; group = 2
@@ -141,6 +163,7 @@ def getAlexnetSelectedLayer(layer):
     conv2b = tf.constant(net_data["conv2"][1])
     conv2_in = conv(maxpool1, conv2W, conv2b, k_h, k_w, c_o, s_h, s_w, padding="SAME", group=group)
     conv2 = tf.nn.relu(conv2_in)
+    
     #lrn2
     #lrn(2, 2e-05, 0.75, name='norm2')
     radius = 2; alpha = 2e-05; beta = 0.75; bias = 1.0
@@ -149,10 +172,15 @@ def getAlexnetSelectedLayer(layer):
                                               alpha=alpha,
                                               beta=beta,
                                               bias=bias)
+    
     #maxpool2
     #max_pool(3, 3, 2, 2, padding='VALID', name='pool2')
     k_h = 3; k_w = 3; s_h = 2; s_w = 2; padding = 'VALID'
-    maxpool2 = tf.nn.max_pool(lrn2, ksize=[1, k_h, k_w, 1], strides=[1, s_h, s_w, 1], padding=padding)
+    maxpool2 = tf.nn.max_pool(lrn2, 
+                              ksize=[1, k_h, k_w, 1], 
+                              strides=[1, s_h, s_w, 1], 
+                              padding=padding)
+
     #conv3
     #conv(3, 3, 384, 1, 1, name='conv3')
     k_h = 3; k_w = 3; c_o = 384; s_h = 1; s_w = 1; group = 1
@@ -160,6 +188,7 @@ def getAlexnetSelectedLayer(layer):
     conv3b = tf.constant(net_data["conv3"][1])
     conv3_in = conv(maxpool2, conv3W, conv3b, k_h, k_w, c_o, s_h, s_w, padding="SAME", group=group)
     conv3 = tf.nn.relu(conv3_in)
+
     #conv4
     #conv(3, 3, 384, 1, 1, group=2, name='conv4')
     k_h = 3; k_w = 3; c_o = 384; s_h = 1; s_w = 1; group = 2
@@ -167,6 +196,7 @@ def getAlexnetSelectedLayer(layer):
     conv4b = tf.constant(net_data["conv4"][1])
     conv4_in = conv(conv3, conv4W, conv4b, k_h, k_w, c_o, s_h, s_w, padding="SAME", group=group)
     conv4 = tf.nn.relu(conv4_in)
+
     #conv5
     #conv(3, 3, 256, 1, 1, group=2, name='conv5')
     k_h = 3; k_w = 3; c_o = 256; s_h = 1; s_w = 1; group = 2
@@ -174,6 +204,7 @@ def getAlexnetSelectedLayer(layer):
     conv5b = tf.constant(net_data["conv5"][1])
     conv5_in = conv(conv4, conv5W, conv5b, k_h, k_w, c_o, s_h, s_w, padding="SAME", group=group)
     conv5 = tf.nn.relu(conv5_in)
+
     #maxpool5
     #max_pool(3, 3, 2, 2, padding='VALID', name='pool5')
     k_h = 3; k_w = 3; s_h = 2; s_w = 2; padding = 'VALID'
@@ -184,6 +215,7 @@ def getAlexnetSelectedLayer(layer):
     fc6b = tf.constant(net_data["fc6"][1])
     #fc6 = tf.nn.relu_layer(tf.reshape(maxpool5, [-1, int(tf.prod(maxpool5.get_shape()[1:]))]), fc6W, fc6b)
     fc6 = tf.nn.relu_layer(tf.reshape(maxpool5, [-1, tf.cast((tf.reduce_prod(maxpool5.get_shape()[1:])), tf.int32)]), fc6W, fc6b)
+
     #fc7
     #fc(4096, name='fc7')
     fc7W = tf.constant(net_data["fc7"][0])
@@ -209,16 +241,20 @@ def getLayerOutputFromPretrainedAlexnet(layer, data_image):
     X_t, selected_layer = getAlexnetSelectedLayer(layer)
     # Initialize all the variables
     # init = tf.global_variables_initializer()
-    def prepare_mini_batch(k):
-#        first = k * mini_batch_size
-#        last = min((k + 1) * mini_batch_size, m)
-        X_batch = np.asarray(data_image[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32)
-        return X_batch
+    
+#    def prepare_mini_batch(k):
+##        first = k * mini_batch_size
+##        last = min((k + 1) * mini_batch_size, m)
+#        X_batch = np.asarray(data_image[k * mini_batch_size : (k + 1) * mini_batch_size].tolist(), dtype=np.float32)
+#        return X_batch
+    
     my_array = np.array([])
     with tf.Session() as sess:
     # Run the initialization
         for k in range(num_complete_minibatches + 1):
-            X_batch = prepare_mini_batch(k)
+#            X_batch = prepare_mini_batch(k)
+            X_batch = np.asarray(data_image[k * mini_batch_size : (k+1) * mini_batch_size].tolist(), 
+             dtype=np.float32)
             result = sess.run(selected_layer, {X_t: X_batch})
             if k == 0:
                 my_array = result
@@ -247,7 +283,7 @@ FILENAME_TEST_CACHE = './cache/alexnet_ML/cache_test_filename'
 def create_test_data():
     IMAGETESTPATH = './data/test/'
     filenames_test = np.expand_dims(np.array([s.replace(".jpg", "") for s in os.listdir(IMAGETESTPATH)]), axis=1)
-    images_test, _ = prepare_datas(IMAGETESTPATH, filenames_test)
+    images_test, _ = prepare_data(IMAGETESTPATH, filenames_test)
     return filenames_test, np.array(images_test)
 
 def get_test_data():
