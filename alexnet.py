@@ -264,8 +264,8 @@ def getLayerOutputFromPretrainedAlexnet(layer, data_image):
 
 
 def get_data_from_pretrained_alexnet(layer):
-    ALEX_X_FILE = './cache/alexnet_ML/X_alex_'+ layer + '.npy'
-    LABEL_FILE = './cache/alexnet_ML/y_label.npy'
+    ALEX_X_FILE = './tools/alexnet/X_alex_'+ layer + '.npy'
+    LABEL_FILE = './tools/alexnet/y_label.npy'
     if os.path.isfile(ALEX_X_FILE):
         X = np.load(ALEX_X_FILE)
         y = np.load(LABEL_FILE)
@@ -278,7 +278,7 @@ def get_data_from_pretrained_alexnet(layer):
     return X, y
 
 
-FILENAME_TEST_CACHE = './cache/alexnet_ML/cache_test_filename'
+FILENAME_TEST_CACHE = './tools/alexnet/cache_test_filename'
 
 def create_test_data():
     IMAGETESTPATH = './data/test/'
@@ -287,7 +287,7 @@ def create_test_data():
     return filenames_test, np.array(images_test)
 
 def get_test_data():
-    FILETESTCACHE = './cache/alexnet_ML/cache_test_data'
+    FILETESTCACHE = './tools/alexnet/cache_test_data'
     if os.path.isfile(FILETESTCACHE + '.npy'):
         data = np.load(FILETESTCACHE + '.npy')
         filenames = np.load(FILENAME_TEST_CACHE + '.npy')
@@ -298,7 +298,7 @@ def get_test_data():
     return filenames, data
 
 def get_test_from_pretrained_alexnet(layer):
-    ALEX_X_TEST_FILE = './cache/alexnet_ML/X_alex_test_'+ layer + '.npy'
+    ALEX_X_TEST_FILE = './tools/alexnet/X_alex_test_'+ layer + '.npy'
     if os.path.isfile(ALEX_X_TEST_FILE):
         X_test = np.load(ALEX_X_TEST_FILE)
         filenames = np.load(FILENAME_TEST_CACHE + '.npy')
@@ -327,4 +327,4 @@ df = pd.DataFrame(data=proba,               # values
                   index=filenames,          # 1st column as index
                   columns=clf.classes_)     # 1st row as the column names
 df.index.name = "id"
-df.to_csv('./cache/alexnet_ML/submission.csv')
+df.to_csv('./tools/alexnet/submission.csv')

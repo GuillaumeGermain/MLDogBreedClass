@@ -108,3 +108,4 @@ img_cache/
 data/
 tmp/submission.csv.7z
 /.project
+tools/models/
