@@ -174,7 +174,6 @@ def getLayerOutputFromPretrainedInceptionv4(layer,data_image):
         for v in variables:
             if v.name.split(':')[0] in var_keep_dic:
                 variables_to_restore.append(v)
-                print(v)
         restorer = tf.train.Saver(variables_to_restore)
         restorer.restore(sess, TRAINEDMODEL)
         for k in range(num_complete_minibatches + 1):
@@ -184,59 +183,57 @@ def getLayerOutputFromPretrainedInceptionv4(layer,data_image):
                 my_array = result
             else:
                 my_array = np.concatenate((my_array,result), axis=0)
-    return  my_array        
+        tf.reset_default_graph()
+    return  my_array
 
 def get_data_from_pretrained_Inceptionv4(layer):
-    """
-        
-    """    
-    INCEPTION_X_FILE = './cache/inception_v4/X_inception_v4_'+ layer + '.npy'
-    LABEL_FILE = './cache/inception_v4/y_label.npy'
-    if (os.path.isfile(INCEPTION_X_FILE)  or os.path.isfile('./cache/inception_v4/X_alex_'+ layer + '.npy')):
-        X = np.load(INCEPTION_X_FILE)
-        y = np.load(LABEL_FILE)
-    else:
-        data = get_data()
-        y = data[1]
-        X = getLayerOutputFromPretrainedInceptionv4(layer,np.array(data[0]))
-        np.save( LABEL_FILE, y )
-        np.save( INCEPTION_X_FILE, X )
-    return X,y
+	INCEPTION_X_FILE = './cache/inception_v4/X_inception_v4_'+ layer + '.npy'
+	LABEL_FILE = './cache/inception_v4/y_label.npy'
+	if (os.path.isfile(INCEPTION_X_FILE)  or os.path.isfile('./cache/inception_v4/X_alex_'+ layer + '.npy')):
+		X = np.load(INCEPTION_X_FILE)
+		y = np.load(LABEL_FILE)
+	else:
+		data = get_data()
+		y = data[1]
+		X = getLayerOutputFromPretrainedInceptionv4(layer,np.array(data[0]))
+		np.save( LABEL_FILE, y )
+		np.save( INCEPTION_X_FILE, X )
+	return X,y
 
 FILENAMETESTCACHE = './cache/inception_v4/cache_test_filename'
 
 def create_test_data():
-    IMAGETESTPATH = './data/test/'
-    filenames_test = np.expand_dims(np.array([s.replace(".jpg","") for s in os.listdir(IMAGETESTPATH)]), axis=1)
-    images_test,_ = prepare_datas(IMAGETESTPATH,filenames_test)
-    return filenames_test,np.array(images_test)
+	IMAGETESTPATH = './data/test/'
+	filenames_test = np.expand_dims(np.array([s.replace(".jpg","") for s in os.listdir(IMAGETESTPATH)]), axis=1)
+	images_test,_ = prepare_datas(IMAGETESTPATH,filenames_test)
+	return filenames_test,np.array(images_test)
 
 def get_test_data():
-    FILETESTCACHE = './cache/inception_v4/cache_test_data'
-    if (os.path.isfile(FILETESTCACHE + '.npy')):
-        data = np.load(FILETESTCACHE + '.npy')
-        filenames = np.load(FILENAMETESTCACHE + '.npy')
-    else:
-        filenames,data = create_test_data()
-        np.save(FILENAMETESTCACHE,filenames)
-        np.save(FILETESTCACHE,data)
-    return filenames,data
+	FILETESTCACHE = './cache/inception_v4/cache_test_data'
+	if (os.path.isfile(FILETESTCACHE + '.npy')):
+		data = np.load(FILETESTCACHE + '.npy')
+		filenames = np.load(FILENAMETESTCACHE + '.npy')
+	else:
+		filenames,data = create_test_data()
+		np.save(FILENAMETESTCACHE,filenames)
+		np.save(FILETESTCACHE,data)
+	return filenames,data
 
 def get_test_data_from_pretrained_Inceptionv4(layer):
-    INCEPTION_X_TEST_FILE = './cache/inception_v4/X_inception_v4_test_'+ layer + '.npy'
-    if (os.path.isfile(INCEPTION_X_TEST_FILE)):
-        X_test = np.load(INCEPTION_X_TEST_FILE)
-        filenames = np.load(FILENAMETESTCACHE + '.npy')
-    else:
-        filenames,images = get_test_data()
-        X_test = getLayerOutputFromPretrainedInceptionv4(layer,images)
-        np.save( INCEPTION_X_TEST_FILE, X_test)
-    return filenames,X_test    
+	INCEPTION_X_TEST_FILE = './cache/inception_v4/X_inception_v4_test_'+ layer + '.npy'
+	if (os.path.isfile(INCEPTION_X_TEST_FILE)):
+		X_test = np.load(INCEPTION_X_TEST_FILE)
+		filenames = np.load(FILENAMETESTCACHE + '.npy')
+	else:
+		filenames,images = get_test_data()
+		X_test = getLayerOutputFromPretrainedInceptionv4(layer,images)
+		np.save( INCEPTION_X_TEST_FILE, X_test)
+	return filenames,X_test	
 
-
-X,y = get_data_from_pretrained_Inceptionv4('Mixed_7d')
-del X
-del y
-gc.collect()
-filenames_test,X_test = get_test_data_from_pretrained_Inceptionv4('Mixed_7d')
+if __name__ == "__main__":
+    X,y = get_data_from_pretrained_Inceptionv4('Mixed_7d')
+    del X
+    del y
+    gc.collect()
+    filenames_test,X_test = get_test_data_from_pretrained_Inceptionv4('Mixed_7d')
 
