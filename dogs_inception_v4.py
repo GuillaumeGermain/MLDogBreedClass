@@ -235,5 +235,5 @@ if __name__ == "__main__":
     del X
     del y
     gc.collect()
-    filenames_test,X_test = get_test_data_from_pretrained_Inceptionv4('Mixed_7d')
+    filenames_test, X_test = get_test_data_from_pretrained_Inceptionv4('Mixed_7d')
 

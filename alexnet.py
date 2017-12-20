@@ -51,7 +51,7 @@ def image_to_array(path, filename):
     if os.path.isfile(infile):
         try:
             image = np.array(ndimage.imread(infile, flatten=False, mode="RGB"))
-            if image.shape[0] * image.shape[1] * image.shape[2] < 400_000_000_000:
+            if image.shape[0] * image.shape[1] * image.shape[2] < 400000000000:
                 my_image = scipy.misc.imresize(image, size=(IMAGE_WIDTH, IMAGE_WIDTH))
                 return my_image
             else:
